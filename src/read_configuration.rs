@@ -110,12 +110,10 @@ pub fn read_configuration() -> Formatter {
             }
         }
 
-        let new_rules = Rules {
-            change_country_code: Some(parent_country_code.as_str().to_owned()),
-            change_country: template["change_country"].as_str().map(|s| s.to_string()),
-            add_component,
-            ..Default::default()
-        };
+        let mut new_rules = rules_by_country.get(&parent_country_code).map(|r| r.clone()).unwrap_or_else(|| Rules::default());
+            new_rules.change_country_code =  Some(parent_country_code.as_str().to_owned());
+            new_rules.change_country =  template["change_country"].as_str().map(|s| s.to_string());
+            new_rules.add_component = add_component;
         rules_by_country.insert(country_code.clone(), new_rules);
     }
 
@@ -199,7 +197,10 @@ fn read_replace(yaml_rules: &yaml_rust::Yaml) -> Vec<ReplaceRule> {
                         ReplaceRule::Component((
                             component,
                             Replacement {
-                                regex: regex::Regex::new(parts[1]).expect("invalid regex"),
+                                regex: regex::RegexBuilder::new(parts[1])
+                                    .multi_line(true)
+                                    .build()
+                                    .expect("invalid regex"),
                                 replacement_value: r[1]
                                     .as_str()
                                     .expect("invalid replace rule")
@@ -209,7 +210,10 @@ fn read_replace(yaml_rules: &yaml_rust::Yaml) -> Vec<ReplaceRule> {
                     } else {
                         // it's a replace for all components
                         ReplaceRule::All(Replacement {
-                            regex: regex::Regex::new(first_val).expect("invalid regex"),
+                            regex: regex::RegexBuilder::new(first_val)
+                                .multi_line(true)
+                                .build()
+                                .expect("invalid regex"),
                             replacement_value: r[1]
                                 .as_str()
                                 .expect("invalid replace rule")

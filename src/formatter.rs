@@ -2,7 +2,7 @@ use crate::{Address, Component};
 use failure::Fail;
 use failure::{format_err, Error};
 use itertools::Itertools;
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
@@ -322,9 +322,9 @@ impl Formatter {
 
 fn sanity_clean_address(addr: &mut Address) {
     lazy_static::lazy_static! {
-        static ref POST_CODE_RANGE:  Regex= Regex::new(r#"\d+;\d+"#).unwrap();
-        static ref MATCHABLE_POST_CODE_RANGE:  Regex= Regex::new(r#"^(\d{5}),\d{5}"#).unwrap();
-        static ref IS_URL:  Regex= Regex::new(r#"https?://"#).unwrap();
+        static ref POST_CODE_RANGE: Regex = Regex::new(r#"\d+;\d+"#).unwrap();
+        static ref MATCHABLE_POST_CODE_RANGE: Regex = Regex::new(r#"^(\d{5}),\d{5}"#).unwrap();
+        static ref IS_URL: Regex= Regex::new(r#"https?://"#).unwrap();
 
     }
     // cleanup the postcode
@@ -344,7 +344,7 @@ fn sanity_clean_address(addr: &mut Address) {
     for c in Component::iter() {
         if let Some(v) = &addr[c] {
             if IS_URL.is_match(v) {
-                addr[Component::Postcode] = None;
+                addr[c] = None;
             }
         }
     }
@@ -354,18 +354,18 @@ fn cleanup_rendered(text: &str, rules: &Rules) -> String {
     use itertools::Itertools;
     lazy_static::lazy_static! {
         static ref REPLACEMENTS:  [(Regex, &'static str); 12]= [
-            (Regex::new(r"[},\s]+$").unwrap(), ""),
-            (Regex::new(r"(?m)^ - ").unwrap(), ""), // line starting with dash due to a parameter missing
-            (Regex::new(r"(?m)^[,\s]+").unwrap(), ""),
-            (Regex::new(r",\s*,").unwrap(), ", "), //multiple commas to one
-            (Regex::new(r"[\t\p{Zs}]+,[\t\p{Zs}]+").unwrap(), ", "), //one horiz whitespace behind comma
-            (Regex::new(r"[\t ][\t ]+").unwrap(), " "), //multiple horiz whitespace to one
-            (Regex::new(r"[\t\p{Zs}]\n").unwrap(), "\n"), //horiz whitespace, newline to newline
-            (Regex::new(r"\n,").unwrap(), "\n"), //newline comma to just newline
-            (Regex::new(r",,+").unwrap(), ","), //multiple commas to one
-            (Regex::new(r",\n").unwrap(), "\n"), //comma newline to just newline
-            (Regex::new(r"\n[\t\p{Zs}]+").unwrap(), "\n"), //newline plus space to newline
-            (Regex::new(r"\n\n+").unwrap(), "\n"), //multiple newline to one
+            (RegexBuilder::new(r"[},\s]+$").multi_line(true).build().unwrap(), ""),
+            (RegexBuilder::new(r"^ - ").multi_line(true).build().unwrap(), ""), // line starting with dash due to a parameter missing
+            (RegexBuilder::new(r"^[,\s]+").multi_line(true).build().unwrap(), ""),
+            (RegexBuilder::new(r",\s*,").multi_line(true).build().unwrap(), ", "), //multiple commas to one
+            (RegexBuilder::new(r"[\t\p{Zs}]+,[\t\p{Zs}]+").multi_line(true).build().unwrap(), ", "), //one horiz whitespace behind comma
+            (RegexBuilder::new(r"[\t ][\t ]+").multi_line(true).build().unwrap(), " "), //multiple horiz whitespace to one
+            (RegexBuilder::new(r"[\t\p{Zs}]\n").multi_line(true).build().unwrap(), "\n"), //horiz whitespace, newline to newline
+            (RegexBuilder::new(r"\n,").multi_line(true).build().unwrap(), "\n"), //newline comma to just newline
+            (RegexBuilder::new(r",,+").multi_line(true).build().unwrap(), ","), //multiple commas to one
+            (RegexBuilder::new(r",\n").multi_line(true).build().unwrap(), "\n"), //comma newline to just newline
+            (RegexBuilder::new(r"\n[\t\p{Zs}]+").multi_line(true).build().unwrap(), "\n"), //newline plus space to newline
+            (RegexBuilder::new(r"\n\n+").multi_line(true).build().unwrap(), "\n"), //multiple newline to one
         ];
 
         static ref FINAL_CLEANUP:  [(Regex, &'static str); 2]= [
@@ -381,6 +381,13 @@ fn cleanup_rendered(text: &str, rules: &Rules) -> String {
         res = rgx.replace_all(&res, *new_val).to_string();
     }
 
+    for r in &rules.postformat_replace {
+        res = r
+            .regex
+            .replace_all(&res, r.replacement_value.as_str())
+            .to_string();
+    }
+
     // we also dedup the string
     // we dedup and trim and all the same 'token' in a line
     // and all the same lines too
@@ -392,13 +399,6 @@ fn cleanup_rendered(text: &str, rules: &Rules) -> String {
 
     for (rgx, new_val) in FINAL_CLEANUP.iter() {
         res = rgx.replace(&res, *new_val).to_string();
-    }
-
-    for r in &rules.postformat_replace {
-        res = r
-            .regex
-            .replace(&res, r.replacement_value.as_str())
-            .to_string();
     }
 
     let res = res.trim();

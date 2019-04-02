@@ -25,3 +25,10 @@ France
         .to_owned()
     )
 }
+
+#[test]
+pub fn empty_address() {
+    let formatter = Formatter::default();
+    let addr = Address::default();
+    assert_eq!(formatter.format(addr).unwrap(), "\n".to_owned())
+}

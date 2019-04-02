@@ -35,7 +35,7 @@ pub fn opencage_tests() {
     if errors.is_empty() {
         log::info!("All tests ok");
     } else {
-        if errors.len() == 13 {
+        if errors.len() == 8 {
             log::warn!(
                 "Some tests are failing but we consider it's ok, it's still a work in progress"
             );

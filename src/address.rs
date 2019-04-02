@@ -25,6 +25,7 @@ pub enum Component {
     CountryCode,
     Continent,
     Town,
+    CityDistrict,
 }
 
 impl serde::Serialize for Component {
