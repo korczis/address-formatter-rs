@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
+const TEMPLATE_NAME: &'static str = "addr";
+
 #[derive(Debug, Clone)]
 pub(crate) struct Replacement {
     pub regex: regex::Regex,
@@ -62,10 +64,30 @@ pub(crate) struct NewComponent {
 }
 
 /// The template represent the rules to apply to a `Address` to format it
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub(crate) struct Template {
     /// Moustache template
-    pub address_template: String,
+    address_template: String, // used only to clone the template
+    pub handlebar_handler: handlebars::Handlebars,
+}
+
+impl Template {
+    pub fn new(address_template: &str) -> Self {
+        let mut template_engine = crate::handlebar_helper::new_template_engine();
+        template_engine
+            .register_template_string(TEMPLATE_NAME, address_template)
+            .expect("impossible to build template");
+        Template {
+            address_template: address_template.to_owned(),
+            handlebar_handler: template_engine,
+        }
+    }
+}
+
+impl Clone for Template {
+    fn clone(&self) -> Self {
+        Self::new(self.address_template.as_str())
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -131,10 +153,9 @@ impl Formatter {
 
         self.preformat(&rules, &mut addr);
 
-        let template_engine = crate::handlebar_helper::new_template_engine();
-
-        let text = template_engine
-            .render_template(&template.address_template, &addr)
+        let text = template
+            .handlebar_handler
+            .render(TEMPLATE_NAME, &addr)
             .map_err(|e| e.context("impossible to render template"))?;
 
         let text = cleanup_rendered(&text, &rules);

@@ -2,6 +2,7 @@ use crate::formatter::{
     CountryCode, Formatter, NewComponent, ReplaceRule, Replacement, Rules, Template, Templates,
 };
 use crate::Component;
+use failure::{format_err, Error};
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -31,19 +32,10 @@ pub fn read_configuration() -> Formatter {
 
     let raw_templates = yaml_rust::YamlLoader::load_from_str(templates_file)
         .expect("impossible to read worldwide.yaml file");
-
-    let default_template = raw_templates[0]["default"]["address_template"]
-        .as_str()
-        .map(|t| Template {
-            address_template: t.to_string(),
-        })
+    let default_template = build_template(&raw_templates[0]["default"]["address_template"])
         .expect("no default address_template provided");
-    let fallback_template = raw_templates[0]["default"]["fallback_template"]
-        .as_str()
-        .map(|t| Template {
-            address_template: t.to_string(),
-        })
-        .expect("no default address_template provided");
+    let fallback_template = build_template(&raw_templates[0]["default"]["fallback_template"])
+        .expect("no fallback address_template provided");
 
     // some countries uses the same rules as other countries (with some slight changes)
     // they are marked as `use_country: another_country_code`
@@ -62,13 +54,8 @@ pub fn read_configuration() -> Formatter {
                 .map(|c| (c, v))
         })
         .filter_map(|(country_code, v)| {
-            if let Some(fallback_template) = v["fallback_template"].as_str() {
-                fallback_templates_by_country.insert(
-                    country_code.clone(),
-                    Template {
-                        address_template: fallback_template.to_string(),
-                    },
-                );
+            if let Ok(fallback_template) = build_template(&v["fallback_template"]) {
+                fallback_templates_by_country.insert(country_code.clone(), fallback_template);
             }
             if let Some(parent_country) = v["use_country"]
                 .as_str()
@@ -87,15 +74,10 @@ pub fn read_configuration() -> Formatter {
                     })
                     .collect();
 
-                let template = Template {
-                    address_template: v["address_template"]
-                        .as_str()
-                        .expect(&format!(
-                            "no address_template found for country {}",
-                            country_code
-                        ))
-                        .to_string(),
-                };
+                let template = build_template(&v["address_template"]).expect(&format!(
+                    "no address_template found for country {}",
+                    country_code
+                ));
                 let rules = Rules {
                     replace: replace_rules,
                     postformat_replace: post_format_replace_rules,
@@ -186,6 +168,14 @@ pub fn read_configuration() -> Formatter {
         state_codes,
         county_codes,
     }
+}
+
+fn build_template(yaml_value: &yaml_rust::Yaml) -> Result<Template, Error> {
+    let addr_template = yaml_value
+        .as_str()
+        .ok_or_else(|| format_err!("no value to build template"))?;
+
+    Ok(Template::new(addr_template))
 }
 
 fn read_replace(yaml_rules: &yaml_rust::Yaml) -> Vec<ReplaceRule> {
