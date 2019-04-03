@@ -51,3 +51,13 @@ impl std::ops::DerefMut for Address {
         &mut self.0
     }
 }
+
+impl Address {
+    pub fn from_hashmap<'a>(data: impl IntoIterator<Item = (Component, &'a str)>) -> Self {
+        let mut a = Self::default();
+        for (k, v) in data.into_iter() {
+            a[k] = Some(v.to_owned());
+        }
+        a
+    }
+}

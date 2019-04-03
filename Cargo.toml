@@ -20,3 +20,6 @@ strum = "0.15"
 strum_macros = "0.15"
 enum-map = { version = "0.5", features = ["serde"] }
 env_logger = "0.6"
+
+[dev-dependencies]
+maplit = "1.0.1"
