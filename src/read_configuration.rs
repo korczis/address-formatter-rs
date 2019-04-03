@@ -110,10 +110,13 @@ pub fn read_configuration() -> Formatter {
             }
         }
 
-        let mut new_rules = rules_by_country.get(&parent_country_code).map(|r| r.clone()).unwrap_or_else(|| Rules::default());
-            new_rules.change_country_code =  Some(parent_country_code.as_str().to_owned());
-            new_rules.change_country =  template["change_country"].as_str().map(|s| s.to_string());
-            new_rules.add_component = add_component;
+        let mut new_rules = rules_by_country
+            .get(&parent_country_code)
+            .map(|r| r.clone())
+            .unwrap_or_else(|| Rules::default());
+        new_rules.change_country_code = Some(parent_country_code.as_str().to_owned());
+        new_rules.change_country = template["change_country"].as_str().map(|s| s.to_string());
+        new_rules.add_component = add_component;
         rules_by_country.insert(country_code.clone(), new_rules);
     }
 

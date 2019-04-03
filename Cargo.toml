@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 failure = "0.1"
 include_dir = "0.2"
-
 serde =  { version = "1", features = ["derive"] }
 serde_yaml = "0.8"
 yaml-rust = "0.4"
