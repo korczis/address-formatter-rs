@@ -374,18 +374,27 @@ fn cleanup_rendered(text: &str, rules: &Rules) -> String {
         ];
     }
 
-    // TODO, better handle the Cow for performance ?
     let mut res = text.to_owned();
 
     for (rgx, new_val) in REPLACEMENTS.iter() {
-        res = rgx.replace_all(&res, *new_val).to_string();
+        let rep = rgx.replace_all(&res, *new_val);
+        // to improve performance, we update the string only if it was changed by the replace
+        match rep {
+            std::borrow::Cow::Borrowed(_) => {}
+            std::borrow::Cow::Owned(v) => {
+                res = v;
+            }
+        }
     }
 
     for r in &rules.postformat_replace {
-        res = r
-            .regex
-            .replace_all(&res, r.replacement_value.as_str())
-            .to_string();
+        let rep = r.regex.replace_all(&res, r.replacement_value.as_str());
+        match rep {
+            std::borrow::Cow::Borrowed(_) => {}
+            std::borrow::Cow::Owned(v) => {
+                res = v;
+            }
+        }
     }
 
     // we also dedup the string
@@ -398,7 +407,13 @@ fn cleanup_rendered(text: &str, rules: &Rules) -> String {
         .join("\n");
 
     for (rgx, new_val) in FINAL_CLEANUP.iter() {
-        res = rgx.replace(&res, *new_val).to_string();
+        let rep = rgx.replace(&res, *new_val);
+        match rep {
+            std::borrow::Cow::Borrowed(_) => {}
+            std::borrow::Cow::Owned(v) => {
+                res = v;
+            }
+        }
     }
 
     let res = res.trim();
