@@ -9,6 +9,8 @@ This crate is based on the amazing work of [OpenCage Data](https://github.com/Op
 
 The implementation is a port of the [PHP](https://github.com/predicthq/address-formatter-php/blob/master/src/Formatter.php), [perl](https://github.com/OpenCageData/perl-Geo-Address-Formatter/blob/master/lib/Geo/Address/Formatter.pm) and [js](https://github.com/fragaria/address-formatter/blob/master/src/index.js) implementation of the Opencage configurations.
 
+This is used by [mimirsbrunn](https://github.com/canaltp/mimirsbrunn), a [geocoder](https://en.wikipedia.org/wiki/Geocoding), to have nicely formatted addreses and POI.
+
 :warning: don't forget to initialize & update the git submodules, as they held the opencage configurations.
 
 `git submodule update --init`
@@ -42,7 +44,6 @@ France
 "#
         .to_owned()
 )
-
 ```
 
 ## Developing
