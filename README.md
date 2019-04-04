@@ -54,3 +54,9 @@ You need an up to date rust version:
 To run the tests (especially the one based on all the [opencage tests cases](./address-formatting/testcases)).
 
 `cargo test`
+
+
+## TODO
+
+ * There here are still some failing tests on corner cases
+ * Abbreviation handling
