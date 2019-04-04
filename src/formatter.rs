@@ -9,6 +9,7 @@ use strum::IntoEnumIterator;
 
 const TEMPLATE_NAME: &'static str = "addr";
 
+/// Represents a Regex and the value to replace the regex matches with
 #[derive(Debug, Clone)]
 pub(crate) struct Replacement {
     pub regex: regex::Regex,
@@ -57,13 +58,14 @@ impl std::fmt::Display for CountryCode {
     }
 }
 
+/// Represents a new field to add the an address
 #[derive(Debug, Clone)]
 pub(crate) struct NewComponent {
     pub component: Component,
     pub new_value: String,
 }
 
-/// The template represent the rules to apply to a `Address` to format it
+/// The template handle the handlerbar template used to format an [`Address`](struct.Address.html)
 #[derive(Debug, Default)]
 pub(crate) struct Template {
     /// Moustache template
@@ -90,6 +92,10 @@ impl Clone for Template {
     }
 }
 
+/// The `Rules` contains all the rules used to cleanup the addresses
+/// Some of those rules are used as preformating rules (before changing the [`Address`](struct.Address.html)
+/// to a text with the handlebar template)
+/// And some of those rules are used as postformating rules, on the formatted text
 #[derive(Debug, Default, Clone)]
 pub(crate) struct Rules {
     pub replace: Vec<ReplaceRule>,
@@ -110,37 +116,109 @@ pub(crate) struct Templates {
     pub fallback_rules: Rules,
 }
 
+/// This [`Formatter`](struct.Formatter.html) holds all the configuration needed to format an [`Address`](struct.Address.html)
+/// to a nice text.
+///
+/// The main method is the `format` method, that takes an [`Address`](struct.Address.html)
+/// or something that can be converted to an [`Address`](struct.Address.html) and return a result with the formatted `String`
+///
+/// ```
+/// # #[macro_use] extern crate maplit;
+/// # fn main() {
+///    use address_formatter::Component::*;
+///    let formatter = address_formatter::Formatter::default();
+///
+///    let addr: address_formatter::Address = hashmap!(
+///        City => "Toulouse",
+///        Country => "France",
+///        CountryCode => "FR",
+///        County => "Toulouse",
+///        HouseNumber => "17",
+///        Neighbourhood => "Lafourguette",
+///        Postcode => "31000",
+///        Road => "Rue du Médecin-Colonel Calbairac",
+///        State => "Midi-Pyrénées",
+///        Suburb => "Toulouse Ouest",
+///    ).into();
+///
+///    assert_eq!(
+///        formatter.format(addr).unwrap(),
+///        r#"17 Rue du Médecin-Colonel Calbairac
+///31000 Toulouse
+///France
+///"#
+///        .to_owned()
+///    )
+/// # }
+///
+/// ```
 pub struct Formatter {
     pub(crate) component_aliases: HashMap<Component, Vec<String>>,
     pub(crate) templates: Templates,
-    // country_to_lang: Vec<>,
     pub(crate) county_codes: HashMap<(CountryCode, String), String>,
     pub(crate) state_codes: HashMap<(CountryCode, String), String>,
+    // country_to_lang: Vec<>,
     // abbreviations: Vec<>,
     // valid_replacement_components: Vec<>
 }
 
+/// This configuration changes the [`Formatter`](struct.Formatter.html) behavior
 #[derive(Default, Debug)]
 pub struct Configuration {
-    country_code: Option<String>,
-    abbreviate: Option<bool>,
+    /// force the use of a give country (so the [`Address`](struct.Address.html) country_code is not used)
+    pub country_code: Option<String>,
+    /// use abbreviation in the formated text (like "Avenue" to "Av.")
+    pub abbreviate: Option<bool>,
 }
 
 impl Formatter {
+    /// Default constructor
     pub fn default() -> Self {
         crate::read_configuration::read_configuration()
     }
 
-    // TODO take an Into<Address> as parameter ?
-    pub fn format(&self, addr: Address) -> Result<String, Error> {
-        self.format_with_config(addr, Configuration::default())
+    /// make a human readable text from an [`Address`](struct.Address.html)
+    /// ```
+    /// # #[macro_use] extern crate maplit;
+    /// # fn main() {
+    ///    use address_formatter::Component::*;
+    ///    let formatter = address_formatter::Formatter::default();
+    ///
+    ///    let addr: address_formatter::Address = hashmap!(
+    ///        City => "Toulouse",
+    ///        Country => "France",
+    ///        CountryCode => "FR",
+    ///        County => "Toulouse",
+    ///        HouseNumber => "17",
+    ///        Neighbourhood => "Lafourguette",
+    ///        Postcode => "31000",
+    ///        Road => "Rue du Médecin-Colonel Calbairac",
+    ///        State => "Midi-Pyrénées",
+    ///        Suburb => "Toulouse Ouest",
+    ///    ).into();
+    ///
+    ///    assert_eq!(
+    ///        formatter.format(addr).unwrap(),
+    ///        r#"17 Rue du Médecin-Colonel Calbairac
+    ///31000 Toulouse
+    ///France
+    ///"#
+    ///        .to_owned()
+    ///    )
+    /// # }
+    /// ```
+    pub fn format(&self, into_addr: impl Into<Address>) -> Result<String, Error> {
+        self.format_with_config(into_addr.into(), Configuration::default())
     }
 
+    /// make a human readable text from an [`Address`](struct.Address.html)
+    /// Same as the format method, but with a [`Configuration`](address_formatter::formatter::Configuration) object
     pub fn format_with_config(
         &self,
-        mut addr: Address,
+        into_addr: impl Into<Address>,
         conf: Configuration,
     ) -> Result<String, Error> {
+        let mut addr = into_addr.into();
         let country_code = self.find_country_code(&mut addr, conf);
 
         sanity_clean_address(&mut addr);
@@ -162,16 +240,6 @@ impl Formatter {
 
         Ok(text)
     }
-
-    /// make an international one line label for the address
-    // pub fn one_line_label(&self, addr: &Address, conf: Configuration) -> String {
-    //     unimplemented!
-    // }
-
-    // /// make an international multi line label for the address
-    // pub fn multi_line_label(&self, addr: &Address, conf: Configuration) -> String {
-    //     unimplemented!
-    // }
 
     fn find_country_code(&self, addr: &mut Address, conf: Configuration) -> Option<CountryCode> {
         let mut country_code = conf
@@ -227,6 +295,7 @@ impl Formatter {
             .unwrap_or(&self.templates.default_template)
     }
 
+    /// Build an [`Address`](struct.Address.html)(crate::Address) from an unstructed source (like Nominatim output)
     pub fn build_address<'a>(
         &self,
         values: impl IntoIterator<Item = (&'a str, String)>,

@@ -33,7 +33,7 @@ pub fn easier_init_test() {
     use Component::*;
     let formatter = Formatter::default();
 
-    let addr = Address::from_hashmap(hashmap!(
+    let data = hashmap!(
         City => "Toulouse",
         Country => "France",
         CountryCode => "FR",
@@ -44,10 +44,10 @@ pub fn easier_init_test() {
         Road => "Rue du Médecin-Colonel Calbairac",
         State => "Midi-Pyrénées",
         Suburb => "Toulouse Ouest",
-    ));
+    );
 
     assert_eq!(
-        formatter.format(addr).unwrap(),
+        formatter.format(data).unwrap(),
         r#"17 Rue du Médecin-Colonel Calbairac
 31000 Toulouse
 France
