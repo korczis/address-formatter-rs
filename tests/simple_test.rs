@@ -64,22 +64,33 @@ pub fn empty_address() {
 }
 
 #[test]
-pub fn pouet() {
-    let regex = regex::RegexBuilder::new(", United Kingdom$")
-        .multi_line(true)
-        .build()
-        .unwrap();
+pub fn address_builder() {
+    let formatter = Formatter::default();
+    let addr_builder = address_formatter::AddressBuilder::default();
+    let data = [
+        ("building", "Mairie (bureaux administratifs)"),
+        ("city", "Papeete"),
+        (
+            "country",
+            "Polynésie française, Îles du Vent (eaux territoriales)",
+        ),
+        ("country_code", "fr"),
+        ("county", "Îles du Vent"),
+        ("postcode", "98714"),
+        ("road", "Rue des Remparts"),
+        ("state", "French Polynesia"),
+    ];
 
-    let bob = r#"DG1
-Seabreeze Village
-British Indian Ocean Territory, United Kingdom"#;
+    let addr =
+        addr_builder.build_address(data.into_iter().map(|(k, v)| (k.clone(), v.to_string())));
 
-    let res = regex.replace_all(&bob, "\nUnited Kingdom");
     assert_eq!(
-        res,
-        r#"DG1
-Seabreeze Village
-British Indian Ocean Territory
-United Kingdom"#
+        formatter.format(addr).unwrap(),
+        r#"Mairie (bureaux administratifs)
+Rue des Remparts
+98714 Papeete
+Polynésie française
+"#
+        .to_owned()
     )
 }

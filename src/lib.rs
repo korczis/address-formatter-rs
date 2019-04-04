@@ -40,7 +40,42 @@
 //!        .to_owned()
 //!    )
 //! # }
+//! ```
 //!
+//! If your data are less stuctured, you can use the [`AddressBuilder`](struct.AddressBuilder.html) to build an [`Address`](struct.Address.html)
+//!
+//!
+//! ```
+//! # fn main() {
+//!    let formatter = address_formatter::Formatter::default();
+//!    let addr_builder = address_formatter::AddressBuilder::default();
+//!    let data = [
+//!        ("building", "Mairie (bureaux administratifs)"),
+//!        ("city", "Papeete"),
+//!        (
+//!            "country",
+//!            "Polynésie française, Îles du Vent (eaux territoriales)",
+//!        ),
+//!        ("country_code", "fr"),
+//!        ("county", "Îles du Vent"),
+//!        ("postcode", "98714"),
+//!        ("road", "Rue des Remparts"),
+//!        ("state", "French Polynesia"),
+//!    ];
+//!
+//!    let addr =
+//!        addr_builder.build_address(data.into_iter().map(|(k, v)| (k.clone(), v.to_string())));
+//!
+//!    assert_eq!(
+//!        formatter.format(addr).unwrap(),
+//!        r#"Mairie (bureaux administratifs)
+//!Rue des Remparts
+//!98714 Papeete
+//!Polynésie française
+//!"#
+//!        .to_owned()
+//!    )
+//! # }
 //! ```
 
 pub(crate) mod address;
@@ -49,4 +84,4 @@ pub(crate) mod handlebar_helper;
 pub(crate) mod read_configuration;
 
 pub use address::{Address, Component};
-pub use formatter::{Configuration, Formatter};
+pub use formatter::{AddressBuilder, Configuration, Formatter};

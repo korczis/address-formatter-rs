@@ -153,7 +153,6 @@ pub(crate) struct Templates {
 ///
 /// ```
 pub struct Formatter {
-    pub(crate) component_aliases: HashMap<Component, Vec<String>>,
     pub(crate) templates: Templates,
     pub(crate) county_codes: HashMap<(CountryCode, String), String>,
     pub(crate) state_codes: HashMap<(CountryCode, String), String>,
@@ -171,12 +170,14 @@ pub struct Configuration {
     pub abbreviate: Option<bool>,
 }
 
-impl Formatter {
+impl Default for Formatter {
     /// Default constructor
-    pub fn default() -> Self {
+    fn default() -> Self {
         crate::read_configuration::read_configuration()
     }
+}
 
+impl Formatter {
     /// make a human readable text from an [`Address`](struct.Address.html)
     /// ```
     /// # #[macro_use] extern crate maplit;
@@ -295,50 +296,6 @@ impl Formatter {
             .unwrap_or(&self.templates.default_template)
     }
 
-    /// Build an [`Address`](struct.Address.html)(crate::Address) from an unstructed source (like Nominatim output)
-    pub fn build_address<'a>(
-        &self,
-        values: impl IntoIterator<Item = (&'a str, String)>,
-    ) -> Address {
-        //TODO move this outside the formatter ?
-        let mut address = Address::default();
-        let mut unknown = HashMap::<String, String>::new();
-        for (k, v) in values.into_iter() {
-            let component = Component::from_str(k).ok();;
-            if let Some(component) = component {
-                address[component] = Some(v);
-            } else {
-                unknown.insert(k.to_string(), v);
-            }
-        }
-
-        // all the unknown fields are added in the 'Attention' field
-        if !unknown.is_empty() {
-            for (c, aliases) in &self.component_aliases {
-                // if the address's component has not been already set, we set it to its first found alias
-                for alias in aliases {
-                    if let Some(a) = unknown.remove(alias) {
-                        if address[*c].is_none() {
-                            address[*c] = Some(a);
-                        }
-                    }
-                }
-            }
-            address[Component::Attention] = Some(unknown.values().join(", "));
-        }
-
-        // hardocded cleanup for some bad country data
-        if let (Some(state), Some(country)) =
-            (&address[Component::State], &address[Component::Country])
-        {
-            if country.parse::<usize>().is_ok() {
-                address[Component::Country] = Some(state.clone());
-                address[Component::State] = None;
-            }
-        }
-        address
-    }
-
     fn preformat(&self, rules: &Rules, addr: &mut Address) {
         for r in &rules.replace {
             r.replace_fields(addr);
@@ -386,6 +343,64 @@ impl Formatter {
                 }
             }
         }
+    }
+}
+
+/// Build [`Address`](struct.Address.html) from a less structured input (like addresses from [Nominatim](https://github.com/openstreetmap/Nominatim))
+///
+/// It applies aliases rules to fill the [`Address`](struct.Address.html)'s fields as good as possible.
+pub struct AddressBuilder {
+    pub(crate) component_aliases: HashMap<Component, Vec<String>>,
+}
+
+impl Default for AddressBuilder {
+    fn default() -> Self {
+        crate::read_configuration::read_address_builder_configuration()
+    }
+}
+
+impl AddressBuilder {
+    /// Build an [`Address`](struct.Address.html)(crate::Address) from an unstructed source (like Nominatim output)
+    pub fn build_address<'a>(
+        &self,
+        values: impl IntoIterator<Item = (&'a str, String)>,
+    ) -> Address {
+        let mut address = Address::default();
+        let mut unknown = HashMap::<String, String>::new();
+        for (k, v) in values.into_iter() {
+            let component = Component::from_str(k).ok();;
+            if let Some(component) = component {
+                address[component] = Some(v);
+            } else {
+                unknown.insert(k.to_string(), v);
+            }
+        }
+
+        // all the unknown fields are added in the 'Attention' field
+        if !unknown.is_empty() {
+            for (c, aliases) in &self.component_aliases {
+                // if the address's component has not been already set, we set it to its first found alias
+                for alias in aliases {
+                    if let Some(a) = unknown.remove(alias) {
+                        if address[*c].is_none() {
+                            address[*c] = Some(a);
+                        }
+                    }
+                }
+            }
+            address[Component::Attention] = Some(unknown.values().join(", "));
+        }
+
+        // hardocded cleanup for some bad country data
+        if let (Some(state), Some(country)) =
+            (&address[Component::State], &address[Component::Country])
+        {
+            if country.parse::<usize>().is_ok() {
+                address[Component::Country] = Some(state.clone());
+                address[Component::State] = None;
+            }
+        }
+        address
     }
 }
 

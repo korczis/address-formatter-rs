@@ -1,4 +1,4 @@
-use address_formatter::{Address, Formatter};
+use address_formatter::{Address, AddressBuilder, Formatter};
 use failure::{format_err, Error};
 use include_dir::{include_dir, include_dir_impl};
 use yaml_rust::{Yaml, YamlLoader};
@@ -9,6 +9,7 @@ pub fn opencage_tests() {
     let tests_dir = include_dir!("./address-formatting/testcases/countries");
 
     let formatter = Formatter::default();
+    let addresses_builder = AddressBuilder::default();
     let errors: Vec<_> = tests_dir
         .files()
         .iter()
@@ -24,7 +25,7 @@ pub fn opencage_tests() {
             })
         })
         .flat_map(|(s, file_name)| s.into_iter().map(move |s| (s, file_name.clone())))
-        .map(|(t, file_name)| run_test(t, &file_name, &formatter))
+        .map(|(t, file_name)| run_test(t, &file_name, &formatter, &addresses_builder))
         .filter_map(|r| r.err())
         .map(|e| {
             log::error!("test on error: {}", e);
@@ -45,7 +46,12 @@ pub fn opencage_tests() {
     }
 }
 
-fn run_test(yaml: Yaml, file_name: &str, formatter: &Formatter) -> Result<(), Error> {
+fn run_test(
+    yaml: Yaml,
+    file_name: &str,
+    formatter: &Formatter,
+    addresses_builder: &AddressBuilder,
+) -> Result<(), Error> {
     let description = yaml["description"]
         .as_str()
         .unwrap_or("no description provided");
@@ -60,7 +66,7 @@ fn run_test(yaml: Yaml, file_name: &str, formatter: &Formatter) -> Result<(), Er
         yaml["components"]
             .as_hash()
             .ok_or(format_err!("no component value provided {}", file_name))?,
-        &formatter,
+        addresses_builder,
     )?;
 
     let formated_value = formatter.format(addr)?;
@@ -95,10 +101,10 @@ got:
 // so we have to parse the parse manually
 fn read_addr(
     component: &linked_hash_map::LinkedHashMap<Yaml, Yaml>,
-    formatter: &Formatter,
+    addr_builder: &AddressBuilder,
 ) -> Result<Address, Error> {
     Ok(
-        formatter.build_address(component.iter().filter_map(|(k, v)| {
+        addr_builder.build_address(component.iter().filter_map(|(k, v)| {
             Some((
                 k.as_str()?,
                 v.as_str()

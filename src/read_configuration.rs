@@ -1,5 +1,6 @@
 use crate::formatter::{
-    CountryCode, Formatter, NewComponent, ReplaceRule, Replacement, Rules, Template, Templates,
+    AddressBuilder, CountryCode, Formatter, NewComponent, ReplaceRule, Replacement, Rules,
+    Template, Templates,
 };
 use crate::Component;
 use failure::{format_err, Error};
@@ -9,26 +10,7 @@ use std::str::FromStr;
 pub fn read_configuration() -> Formatter {
     // read all the opencage configuration
     // let opencage_dir = include_dir!("./address-formatting/conf");
-    let component_file = include_str!("../address-formatting/conf/components.yaml");
     let templates_file = include_str!("../address-formatting/conf/countries/worldwide.yaml");
-    let raw_components = yaml_rust::YamlLoader::load_from_str(component_file)
-        .expect("impossible to read components.yaml file");
-
-    let mut component_aliases = HashMap::<_, _>::new();
-
-    for c in &raw_components {
-        if let Some(aliases) = c["aliases"].as_vec() {
-            let name = c["name"].as_str().unwrap();
-            let component =
-                Component::from_str(name).expect(&format!("{} is not a valid component", name));
-            for a in aliases {
-                component_aliases
-                    .entry(component)
-                    .or_insert_with(|| vec![])
-                    .push(a.as_str().unwrap().to_string());
-            }
-        }
-    }
 
     let raw_templates = yaml_rust::YamlLoader::load_from_str(templates_file)
         .expect("impossible to read worldwide.yaml file");
@@ -164,11 +146,33 @@ pub fn read_configuration() -> Formatter {
         fallback_rules: Rules::default(),
     };
     Formatter {
-        component_aliases,
         templates,
         state_codes,
         county_codes,
     }
+}
+
+pub fn read_address_builder_configuration() -> AddressBuilder {
+    let component_file = include_str!("../address-formatting/conf/components.yaml");
+    let raw_components = yaml_rust::YamlLoader::load_from_str(component_file)
+        .expect("impossible to read components.yaml file");
+    let mut component_aliases = HashMap::<_, _>::new();
+
+    for c in &raw_components {
+        if let Some(aliases) = c["aliases"].as_vec() {
+            let name = c["name"].as_str().unwrap();
+            let component =
+                Component::from_str(name).expect(&format!("{} is not a valid component", name));
+            for a in aliases {
+                component_aliases
+                    .entry(component)
+                    .or_insert_with(|| vec![])
+                    .push(a.as_str().unwrap().to_string());
+            }
+        }
+    }
+
+    AddressBuilder { component_aliases }
 }
 
 fn build_template(yaml_value: &yaml_rust::Yaml) -> Result<Template, Error> {
