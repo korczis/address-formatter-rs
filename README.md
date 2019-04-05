@@ -20,9 +20,9 @@ This is used by [mimirsbrunn](https://github.com/canaltp/mimirsbrunn), a [geocod
 Add `address-formatter` in the Cargo.toml.
 
 ```rust
-#[macro_use] extern crate maplit; // just to ease the Address creation
+#[macro_use] extern crate maplit; // just to ease the Place creation
 
-use address_formatter::{Address, Component, Formatter};
+use address_formatter::{Component, Formatter};
 use Component::*;
 let formatter = Formatter::default();
 
