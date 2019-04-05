@@ -59,7 +59,7 @@ impl serde::Serialize for Component {
     }
 }
 
-/// An [`Address`](struct.Address.html) is a structured way to represent a postal address.Address
+/// An [`Address`](struct.Address.html) is a structured way to represent a postal address.
 ///
 ///
 /// Note: it is internally represented as an EnumMap to easily loop over all the fields

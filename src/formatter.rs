@@ -213,7 +213,8 @@ impl Formatter {
     }
 
     /// make a human readable text from an [`Address`](struct.Address.html)
-    /// Same as the format method, but with a [`Configuration`](address_formatter::formatter::Configuration) object
+    /// Same as the [`format`](struct.Formatter.html#method.format) method,
+    /// but with a [`Configuration`](address_formatter::formatter::Configuration) object
     pub fn format_with_config(
         &self,
         into_addr: impl Into<Address>,
