@@ -1,6 +1,6 @@
 use crate::formatter::{
-    AddressBuilder, CountryCode, Formatter, NewComponent, ReplaceRule, Replacement, Rules,
-    Template, Templates,
+    CountryCode, Formatter, NewComponent, PlaceBuilder, ReplaceRule, Replacement, Rules, Template,
+    Templates,
 };
 use crate::Component;
 use failure::{format_err, Error};
@@ -152,7 +152,7 @@ pub fn read_configuration() -> Formatter {
     }
 }
 
-pub fn read_address_builder_configuration() -> AddressBuilder {
+pub fn read_place_builder_configuration() -> PlaceBuilder {
     let component_file = include_str!("../address-formatting/conf/components.yaml");
     let raw_components = yaml_rust::YamlLoader::load_from_str(component_file)
         .expect("impossible to read components.yaml file");
@@ -172,7 +172,7 @@ pub fn read_address_builder_configuration() -> AddressBuilder {
         }
     }
 
-    AddressBuilder { component_aliases }
+    PlaceBuilder { component_aliases }
 }
 
 fn build_template(yaml_value: &yaml_rust::Yaml) -> Result<Template, Error> {

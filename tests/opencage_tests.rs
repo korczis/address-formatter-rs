@@ -1,4 +1,4 @@
-use address_formatter::{Address, AddressBuilder, Formatter};
+use address_formatter::{Formatter, Place, PlaceBuilder};
 use failure::{format_err, Error};
 use include_dir::{include_dir, include_dir_impl};
 use yaml_rust::{Yaml, YamlLoader};
@@ -9,7 +9,7 @@ pub fn opencage_tests() {
     let tests_dir = include_dir!("./address-formatting/testcases/countries");
 
     let formatter = Formatter::default();
-    let addresses_builder = AddressBuilder::default();
+    let places_builder = PlaceBuilder::default();
     let errors: Vec<_> = tests_dir
         .files()
         .iter()
@@ -25,7 +25,7 @@ pub fn opencage_tests() {
             })
         })
         .flat_map(|(s, file_name)| s.into_iter().map(move |s| (s, file_name.clone())))
-        .map(|(t, file_name)| run_test(t, &file_name, &formatter, &addresses_builder))
+        .map(|(t, file_name)| run_test(t, &file_name, &formatter, &places_builder))
         .filter_map(|r| r.err())
         .map(|e| {
             log::error!("test on error: {}", e);
@@ -50,7 +50,7 @@ fn run_test(
     yaml: Yaml,
     file_name: &str,
     formatter: &Formatter,
-    addresses_builder: &AddressBuilder,
+    places_builder: &PlaceBuilder,
 ) -> Result<(), Error> {
     let description = yaml["description"]
         .as_str()
@@ -66,7 +66,7 @@ fn run_test(
         yaml["components"]
             .as_hash()
             .ok_or(format_err!("no component value provided {}", file_name))?,
-        addresses_builder,
+        places_builder,
     )?;
 
     let formated_value = formatter.format(addr)?;
@@ -101,10 +101,10 @@ got:
 // so we have to parse the parse manually
 fn read_addr(
     component: &linked_hash_map::LinkedHashMap<Yaml, Yaml>,
-    addr_builder: &AddressBuilder,
-) -> Result<Address, Error> {
+    place_builder: &PlaceBuilder,
+) -> Result<Place, Error> {
     Ok(
-        addr_builder.build_address(component.iter().filter_map(|(k, v)| {
+        place_builder.build_place(component.iter().filter_map(|(k, v)| {
             Some((
                 k.as_str()?,
                 v.as_str()

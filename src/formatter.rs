@@ -1,4 +1,4 @@
-use crate::{Address, Component};
+use crate::{Component, Place};
 use failure::Fail;
 use failure::{format_err, Error};
 use itertools::Itertools;
@@ -58,29 +58,29 @@ impl std::fmt::Display for CountryCode {
     }
 }
 
-/// Represents a new field to add the an address
+/// Represents a new field to add the a place
 #[derive(Debug, Clone)]
 pub(crate) struct NewComponent {
     pub component: Component,
     pub new_value: String,
 }
 
-/// The template handle the handlerbar template used to format an [`Address`](struct.Address.html)
+/// The template handle the handlerbar template used to format a [`Place`](struct.Place.html)
 #[derive(Debug, Default)]
 pub(crate) struct Template {
     /// Moustache template
-    address_template: String, // used only to clone the template
+    place_template: String, // used only to clone the template
     pub handlebar_handler: handlebars::Handlebars,
 }
 
 impl Template {
-    pub fn new(address_template: &str) -> Self {
+    pub fn new(place_template: &str) -> Self {
         let mut template_engine = crate::handlebar_helper::new_template_engine();
         template_engine
-            .register_template_string(TEMPLATE_NAME, address_template)
+            .register_template_string(TEMPLATE_NAME, place_template)
             .expect("impossible to build template");
         Template {
-            address_template: address_template.to_owned(),
+            place_template: place_template.to_owned(),
             handlebar_handler: template_engine,
         }
     }
@@ -88,12 +88,12 @@ impl Template {
 
 impl Clone for Template {
     fn clone(&self) -> Self {
-        Self::new(self.address_template.as_str())
+        Self::new(self.place_template.as_str())
     }
 }
 
-/// The `Rules` contains all the rules used to cleanup the addresses
-/// Some of those rules are used as preformating rules (before changing the [`Address`](struct.Address.html)
+/// The `Rules` contains all the rules used to cleanup the placees
+/// Some of those rules are used as preformating rules (before changing the [`Place`](struct.Place.html)
 /// to a text with the handlebar template)
 /// And some of those rules are used as postformating rules, on the formatted text
 #[derive(Debug, Default, Clone)]
@@ -116,11 +116,11 @@ pub(crate) struct Templates {
     pub fallback_rules: Rules,
 }
 
-/// This [`Formatter`](struct.Formatter.html) holds all the configuration needed to format an [`Address`](struct.Address.html)
+/// This [`Formatter`](struct.Formatter.html) holds all the configuration needed to format a [`Place`](struct.Place.html)
 /// to a nice text.
 ///
-/// The main method is the `format` method, that takes an [`Address`](struct.Address.html)
-/// or something that can be converted to an [`Address`](struct.Address.html) and return a result with the formatted `String`
+/// The main method is the `format` method, that takes a [`Place`](struct.Place.html)
+/// or something that can be converted to a [`Place`](struct.Place.html) and return a result with the formatted `String`
 ///
 /// ```
 /// # #[macro_use] extern crate maplit;
@@ -128,7 +128,7 @@ pub(crate) struct Templates {
 ///    use address_formatter::Component::*;
 ///    let formatter = address_formatter::Formatter::default();
 ///
-///    let addr: address_formatter::Address = hashmap!(
+///    let addr: address_formatter::Place = hashmap!(
 ///        City => "Toulouse",
 ///        Country => "France",
 ///        CountryCode => "FR",
@@ -164,7 +164,7 @@ pub struct Formatter {
 /// This configuration changes the [`Formatter`](struct.Formatter.html) behavior
 #[derive(Default, Debug)]
 pub struct Configuration {
-    /// force the use of a give country (so the [`Address`](struct.Address.html) country_code is not used)
+    /// force the use of a give country (so the [`Place`](struct.Place.html) country_code is not used)
     pub country_code: Option<String>,
     /// use abbreviation in the formated text (like "Avenue" to "Av.")
     pub abbreviate: Option<bool>,
@@ -178,14 +178,14 @@ impl Default for Formatter {
 }
 
 impl Formatter {
-    /// make a human readable text from an [`Address`](struct.Address.html)
+    /// make a human readable text from a [`Place`](struct.Place.html)
     /// ```
     /// # #[macro_use] extern crate maplit;
     /// # fn main() {
     ///    use address_formatter::Component::*;
     ///    let formatter = address_formatter::Formatter::default();
     ///
-    ///    let addr: address_formatter::Address = hashmap!(
+    ///    let addr: address_formatter::Place = hashmap!(
     ///        City => "Toulouse",
     ///        Country => "France",
     ///        CountryCode => "FR",
@@ -208,22 +208,22 @@ impl Formatter {
     ///    )
     /// # }
     /// ```
-    pub fn format(&self, into_addr: impl Into<Address>) -> Result<String, Error> {
+    pub fn format(&self, into_addr: impl Into<Place>) -> Result<String, Error> {
         self.format_with_config(into_addr.into(), Configuration::default())
     }
 
-    /// make a human readable text from an [`Address`](struct.Address.html)
+    /// make a human readable text from a [`Place`](struct.Place.html)
     /// Same as the [`format`](struct.Formatter.html#method.format) method,
     /// but with a [`Configuration`](address_formatter::formatter::Configuration) object
     pub fn format_with_config(
         &self,
-        into_addr: impl Into<Address>,
+        into_addr: impl Into<Place>,
         conf: Configuration,
     ) -> Result<String, Error> {
         let mut addr = into_addr.into();
         let country_code = self.find_country_code(&mut addr, conf);
 
-        sanity_clean_address(&mut addr);
+        sanity_clean_place(&mut addr);
 
         let template = self.find_template(&addr, &country_code);
         let rules = country_code
@@ -243,7 +243,7 @@ impl Formatter {
         Ok(text)
     }
 
-    fn find_country_code(&self, addr: &mut Address, conf: Configuration) -> Option<CountryCode> {
+    fn find_country_code(&self, addr: &mut Place, conf: Configuration) -> Option<CountryCode> {
         let mut country_code = conf
             .country_code
             .or_else(|| addr[Component::CountryCode].clone())
@@ -277,15 +277,15 @@ impl Formatter {
 
     fn find_template<'a>(
         &'a self,
-        addr: &Address,
+        addr: &Place,
         country_code: &Option<CountryCode>,
     ) -> &'a Template {
         country_code
             .as_ref()
             .and_then(|c| {
-                if !has_minimum_address_components(addr) {
-                    // if the address does not have the minimum fields, we get its country fallback template
-                    // if there is a specidif one, else we get the default fallback template
+                if !has_minimum_place_components(addr) {
+                    // if the place does not have the minimum fields, we get its country fallback template
+                    // if there is a specific one, else we get the default fallback template
                     self.templates
                         .fallback_templates_by_country
                         .get(&c)
@@ -297,7 +297,7 @@ impl Formatter {
             .unwrap_or(&self.templates.default_template)
     }
 
-    fn preformat(&self, rules: &Rules, addr: &mut Address) {
+    fn preformat(&self, rules: &Rules, addr: &mut Place) {
         for r in &rules.replace {
             r.replace_fields(addr);
         }
@@ -347,31 +347,28 @@ impl Formatter {
     }
 }
 
-/// Build [`Address`](struct.Address.html) from a less structured input (like addresses from [Nominatim](https://github.com/openstreetmap/Nominatim))
+/// Build [`Place`](struct.Place.html) from a less structured input (like placees from [Nominatim](https://github.com/openstreetmap/Nominatim))
 ///
-/// It applies aliases rules to fill the [`Address`](struct.Address.html)'s fields as good as possible.
-pub struct AddressBuilder {
+/// It applies aliases rules to fill the [`Place`](struct.Place.html)'s fields as good as possible.
+pub struct PlaceBuilder {
     pub(crate) component_aliases: HashMap<Component, Vec<String>>,
 }
 
-impl Default for AddressBuilder {
+impl Default for PlaceBuilder {
     fn default() -> Self {
-        crate::read_configuration::read_address_builder_configuration()
+        crate::read_configuration::read_place_builder_configuration()
     }
 }
 
-impl AddressBuilder {
-    /// Build an [`Address`](struct.Address.html)(crate::Address) from an unstructed source (like Nominatim output)
-    pub fn build_address<'a>(
-        &self,
-        values: impl IntoIterator<Item = (&'a str, String)>,
-    ) -> Address {
-        let mut address = Address::default();
+impl PlaceBuilder {
+    /// Build a [`Place`](struct.Place.html)(crate::Place) from an unstructed source (like Nominatim output)
+    pub fn build_place<'a>(&self, values: impl IntoIterator<Item = (&'a str, String)>) -> Place {
+        let mut place = Place::default();
         let mut unknown = HashMap::<String, String>::new();
         for (k, v) in values.into_iter() {
             let component = Component::from_str(k).ok();;
             if let Some(component) = component {
-                address[component] = Some(v);
+                place[component] = Some(v);
             } else {
                 unknown.insert(k.to_string(), v);
             }
@@ -380,32 +377,31 @@ impl AddressBuilder {
         // all the unknown fields are added in the 'Attention' field
         if !unknown.is_empty() {
             for (c, aliases) in &self.component_aliases {
-                // if the address's component has not been already set, we set it to its first found alias
+                // if the place's component has not been already set, we set it to its first found alias
                 for alias in aliases {
                     if let Some(a) = unknown.remove(alias) {
-                        if address[*c].is_none() {
-                            address[*c] = Some(a);
+                        if place[*c].is_none() {
+                            place[*c] = Some(a);
                         }
                     }
                 }
             }
-            address[Component::Attention] = Some(unknown.values().join(", "));
+            place[Component::Attention] = Some(unknown.values().join(", "));
         }
 
         // hardocded cleanup for some bad country data
-        if let (Some(state), Some(country)) =
-            (&address[Component::State], &address[Component::Country])
+        if let (Some(state), Some(country)) = (&place[Component::State], &place[Component::Country])
         {
             if country.parse::<usize>().is_ok() {
-                address[Component::Country] = Some(state.clone());
-                address[Component::State] = None;
+                place[Component::Country] = Some(state.clone());
+                place[Component::State] = None;
             }
         }
-        address
+        place
     }
 }
 
-fn sanity_clean_address(addr: &mut Address) {
+fn sanity_clean_place(addr: &mut Place) {
     lazy_static::lazy_static! {
         static ref POST_CODE_RANGE: Regex = Regex::new(r#"\d+;\d+"#).unwrap();
         static ref MATCHABLE_POST_CODE_RANGE: Regex = Regex::new(r#"^(\d{5}),\d{5}"#).unwrap();
@@ -505,14 +501,14 @@ fn cleanup_rendered(text: &str, rules: &Rules) -> String {
     format!("{}\n", res) //add final newline
 }
 
-fn has_minimum_address_components(addr: &Address) -> bool {
+fn has_minimum_place_components(addr: &Place) -> bool {
     // if there are neither 'road' nor 'postcode', we consider that there are not enough data
     // and use the fallback template
     addr[Component::Road].is_some() || addr[Component::Postcode].is_some()
 }
 
 impl ReplaceRule {
-    fn replace_fields(&self, addr: &mut Address) {
+    fn replace_fields(&self, addr: &mut Place) {
         match self {
             ReplaceRule::All(replace_rule) => {
                 for c in Component::iter() {

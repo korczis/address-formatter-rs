@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate maplit;
-use address_formatter::{Address, Component, Formatter};
+use address_formatter::{Component, Formatter, Place};
 
 #[test]
 pub fn basic_test() {
     let formatter = Formatter::default();
 
-    let mut addr = Address::default();
+    let mut addr = Place::default();
     addr[Component::City] = Some("Toulouse".to_owned());
     addr[Component::Country] = Some("France".to_owned());
     addr[Component::CountryCode] = Some("FR".to_owned());
@@ -59,14 +59,14 @@ France
 #[test]
 pub fn empty_address() {
     let formatter = Formatter::default();
-    let addr = Address::default();
+    let addr = Place::default();
     assert_eq!(formatter.format(addr).unwrap(), "\n".to_owned())
 }
 
 #[test]
 pub fn address_builder() {
     let formatter = Formatter::default();
-    let addr_builder = address_formatter::AddressBuilder::default();
+    let addr_builder = address_formatter::PlaceBuilder::default();
     let data = [
         ("building", "Mairie (bureaux administratifs)"),
         ("city", "Papeete"),
@@ -81,8 +81,7 @@ pub fn address_builder() {
         ("state", "French Polynesia"),
     ];
 
-    let addr =
-        addr_builder.build_address(data.into_iter().map(|(k, v)| (k.clone(), v.to_string())));
+    let addr = addr_builder.build_place(data.into_iter().map(|(k, v)| (k.clone(), v.to_string())));
 
     assert_eq!(
         formatter.format(addr).unwrap(),
