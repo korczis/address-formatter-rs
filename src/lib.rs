@@ -14,7 +14,6 @@
 //! # #[macro_use] extern crate maplit;
 //! # fn main() {
 //!    use address_formatter::Component::*;
-//!    let formatter = address_formatter::Formatter::default();
 //!
 //!    // create a Place from a HashMap.
 //!    // We could also have created a Place by settings all its fields
@@ -32,7 +31,7 @@
 //!    ).into();
 //!
 //!    assert_eq!(
-//!        formatter.format(addr).unwrap(),
+//!        address_formatter::FORMATTER.format(addr).unwrap(),
 //!        r#"17 Rue du Médecin-Colonel Calbairac
 //!31000 Toulouse
 //!France
@@ -47,6 +46,7 @@
 //!
 //! ```
 //! # fn main() {
+//!    // use can either use the provider singleton address_formatter::FORMATTER or build your own
 //!    let formatter = address_formatter::Formatter::default();
 //!    let addr_builder = address_formatter::PlaceBuilder::default();
 //!    let data = [
@@ -85,3 +85,28 @@ pub(crate) mod read_configuration;
 
 pub use formatter::{Configuration, Formatter, PlaceBuilder};
 pub use place::{Component, Place};
+
+lazy_static::lazy_static! {
+    /// Singleton to ease use of the [`Formatter`](struct.Formatter.html)
+    ///
+    /// ```
+    /// # #[macro_use] extern crate maplit;
+    /// # fn main() {
+    ///    assert_eq!(
+    ///        address_formatter::FORMATTER
+    ///            .format(hashmap!(
+    ///                address_formatter::Component::City => "Toulouse",
+    ///                address_formatter::Component::Country => "France",
+    ///                address_formatter::Component::CountryCode => "FR",
+    ///                address_formatter::Component::Road => "Rue du Médecin-Colonel Calbairac",
+    ///            ))
+    ///            .unwrap(),
+    ///        r#"Rue du Médecin-Colonel Calbairac
+    ///Toulouse
+    ///France
+    ///"#.to_owned()
+    ///    );
+    /// # }
+    /// ```
+    pub static ref FORMATTER: Formatter = Formatter::default();
+}

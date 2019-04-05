@@ -93,3 +93,22 @@ Polynésie française
         .to_owned()
     )
 }
+
+#[test]
+fn use_of_singleton() {
+    assert_eq!(
+        address_formatter::FORMATTER
+            .format(hashmap!(
+                address_formatter::Component::City => "Toulouse",
+                address_formatter::Component::Country => "France",
+                address_formatter::Component::CountryCode => "FR",
+                address_formatter::Component::Road => "Rue du Médecin-Colonel Calbairac",
+            ))
+            .unwrap(),
+        r#"Rue du Médecin-Colonel Calbairac
+Toulouse
+France
+"#
+        .to_owned()
+    )
+}
