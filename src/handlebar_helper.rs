@@ -14,7 +14,7 @@ impl HelperDef for FirstNonNullHelper {
         r: &'reg Handlebars,
         ctx: &Context,
         rc: &mut RenderContext<'reg>,
-        out: &mut Output,
+        out: &mut dyn  Output,
     ) -> HelperResult {
         let tpl = h
             .template()

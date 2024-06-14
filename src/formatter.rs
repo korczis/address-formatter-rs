@@ -366,7 +366,7 @@ impl PlaceBuilder {
         let mut place = Place::default();
         let mut unknown = HashMap::<String, String>::new();
         for (k, v) in values.into_iter() {
-            let component = Component::from_str(k).ok();;
+            let component = Component::from_str(k).ok();
             if let Some(component) = component {
                 place[component] = Some(v);
             } else {
